@@ -1,4 +1,4 @@
-name: Build and deploy to PlayStore and GitHub
+name: Build and deploy to GitHub
 
 on:
   push:
@@ -7,7 +7,6 @@ on:
 
 env:
   BUILD_TOOLS_VERSION: 35.0.0
-  PRE_RELEASE: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
 
 jobs:
 
@@ -29,23 +28,9 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Create google_services.json
-        id: createGoogleServicesJson
-        run: echo '${{ secrets.GOOGLE_SERVICES }}' > app/google-services.json
-
       - name: Build Release APK
         id: buildRelease
-        run: ./gradlew assembleGithubRelease
-
-      - name: Sign Release APK
-        id: sign_app
-        uses: r0adkll/sign-android-release@v1
-        with:
-          releaseDirectory: app/build/outputs/apk/github/release
-          signingKeyBase64: ${{ secrets.KEY_STORE }}
-          alias: ${{ secrets.KEY_STORE_ALIAS }}
-          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew assembleDebug
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
