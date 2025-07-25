@@ -80,4 +80,6 @@
     <string name="hide_wifi_name_description">Setting applies to both Wi-Fi and Internet tiles</string>
     <string name="behaviour">Behaviour</string>
     <string name="look">Look</string>
+    <string name="wifi_hotspot">Wi-Fi Hotspot</string>
+    <string name="hotspot">Hotspot</string>
 </resources>

@@ -47,6 +47,9 @@ class LongPressReceiverActivity : Activity() {
                 BluetoothTileService::class.java.name -> {
                     Settings.ACTION_BLUETOOTH_SETTINGS
                 }
+                WifiHotspotTileService::class.java.name -> {
+                    Settings.ACTION_WIFI_AP_SETTINGS
+                }
                 else -> Settings.ACTION_WIRELESS_SETTINGS
             }
         )

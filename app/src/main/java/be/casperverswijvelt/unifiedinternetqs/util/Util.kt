@@ -31,6 +31,7 @@ import be.casperverswijvelt.unifiedinternetqs.tiles.InternetTileService
 import be.casperverswijvelt.unifiedinternetqs.tiles.MobileDataTileService
 import be.casperverswijvelt.unifiedinternetqs.tiles.NFCTileService
 import be.casperverswijvelt.unifiedinternetqs.tiles.WifiTileService
+import be.casperverswijvelt.unifiedinternetqs.tiles.WifiHotspotTileService
 import be.casperverswijvelt.unifiedinternetqs.ui.MainActivity
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.flow.first
@@ -93,6 +94,37 @@ fun getAirplaneModeEnabled(context: Context): Boolean {
         Settings.Global.AIRPLANE_MODE_ON,
         0
     ) != 0
+}
+
+fun getWifiHotspotEnabled(context: Context): Boolean {
+    // Check if WiFi hotspot is enabled using shell command
+    // This is more reliable than reflection methods
+    return try {
+        val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        val method = wifiManager.javaClass.getMethod("isWifiApEnabled")
+        method.invoke(wifiManager) as Boolean
+    } catch (e: Exception) {
+        false
+    }
+}
+
+fun getWifiHotspotClientsCount(context: Context, callback: (Int) -> Unit) {
+    if (hasShellAccess(context)) {
+        executeShellCommandAsync(
+            "dumpsys wifi | grep -A 20 'mSoftApClients'",
+            context = context
+        ) { result ->
+            var count = 0
+            result?.out?.forEach { line ->
+                if (line.contains("SoftApClient")) {
+                    count++
+                }
+            }
+            callback(count)
+        }
+    } else {
+        callback(0)
+    }
 }
 
 fun getConnectedWifiSSID(
@@ -498,6 +530,13 @@ fun reportToAnalytics(context: Context) {
                             "bluetooth",
                             wasTileUsedInLastXHours(
                                 BluetoothTileService::class.java,
+                                sharedPref
+                            )
+                        )
+                        tiles.put(
+                            "wifiHotspot",
+                            wasTileUsedInLastXHours(
+                                WifiHotspotTileService::class.java,
                                 sharedPref
                             )
                         )

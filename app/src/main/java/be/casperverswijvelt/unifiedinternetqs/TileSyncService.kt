@@ -30,14 +30,17 @@ import be.casperverswijvelt.unifiedinternetqs.tilebehaviour.MobileDataTileBehavi
 import be.casperverswijvelt.unifiedinternetqs.tilebehaviour.NFCTileBehaviour
 import be.casperverswijvelt.unifiedinternetqs.tilebehaviour.TileBehaviour
 import be.casperverswijvelt.unifiedinternetqs.tilebehaviour.WifiTileBehaviour
+import be.casperverswijvelt.unifiedinternetqs.tilebehaviour.WifiHotspotTileBehaviour
 import be.casperverswijvelt.unifiedinternetqs.tiles.AirplaneModeTileService
 import be.casperverswijvelt.unifiedinternetqs.tiles.BluetoothTileService
 import be.casperverswijvelt.unifiedinternetqs.tiles.InternetTileService
 import be.casperverswijvelt.unifiedinternetqs.tiles.MobileDataTileService
 import be.casperverswijvelt.unifiedinternetqs.tiles.NFCTileService
 import be.casperverswijvelt.unifiedinternetqs.tiles.WifiTileService
+import be.casperverswijvelt.unifiedinternetqs.tiles.WifiHotspotTileService
 import be.casperverswijvelt.unifiedinternetqs.ui.MainActivity
 import be.casperverswijvelt.unifiedinternetqs.util.getConnectedWifiSSID
+import be.casperverswijvelt.unifiedinternetqs.util.getWifiHotspotClientsCount
 
 
 const val ACT_BATTERY_LEVEL_CHANGED = "android.bluetooth.device.action.BATTERY_LEVEL_CHANGED"
@@ -71,6 +74,10 @@ class TileSyncService: Service() {
 
         var isTurningOnBluetooth = false
         var isTurningOffBluetooth = false
+
+        var isTurningOnWifiHotspot = false
+        var isTurningOffWifiHotspot = false
+        var wifiHotspotClientsCount = 0
 
         val bluetoothConnectionState: MutableMap<String, Int> = mutableMapOf()
         val bluetoothBatteryLevel: MutableMap<String, Int> = mutableMapOf()
@@ -161,6 +168,16 @@ class TileSyncService: Service() {
             updateBluetoothTile()
         }
     }
+    private val wifiHotspotReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "android.net.wifi.WIFI_AP_STATE_CHANGED") {
+                getWifiHotspotClientsCount(applicationContext) { count ->
+                    wifiHotspotClientsCount = count
+                    updateWifiHotspotTile()
+                }
+            }
+        }
+    }
 
     override fun onBind(intent: Intent?): IBinder? {
         Log.d(TAG,"onBind")
@@ -225,6 +242,13 @@ class TileSyncService: Service() {
                 addAction(ACT_BATTERY_LEVEL_CHANGED)
             }
         )
+
+        // WiFi Hotspot
+        registerReceiver(
+            wifiHotspotReceiver,
+            IntentFilter("android.net.wifi.WIFI_AP_STATE_CHANGED")
+        )
+
         (getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter?.getProfileProxy(
             applicationContext,
             object : BluetoothProfile.ServiceListener {
@@ -257,6 +281,7 @@ class TileSyncService: Service() {
         unregisterReceiver(airplaneModeReceiver)
         unregisterReceiver(nfcReceiver)
         unregisterReceiver(bluetoothReceiver)
+        unregisterReceiver(wifiHotspotReceiver)
 
         updateAllTiles()
     }
@@ -268,6 +293,7 @@ class TileSyncService: Service() {
         updateNFCTile()
         updateAirplaneModeTile()
         updateBluetoothTile()
+        updateWifiHotspotTile()
     }
 
     private fun updateWifiTile() {
@@ -298,6 +324,11 @@ class TileSyncService: Service() {
     private fun updateBluetoothTile() {
         requestListeningState(BluetoothTileService::class.java)
         requestTileBehaviourUpdate(BluetoothTileBehaviour::class.java)
+    }
+
+    private fun updateWifiHotspotTile() {
+        requestListeningState(WifiHotspotTileService::class.java)
+        requestTileBehaviourUpdate(WifiHotspotTileBehaviour::class.java)
     }
 
     private fun <T>requestListeningState(cls: Class<T>) {
